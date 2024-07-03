@@ -9,7 +9,7 @@ from routes.otp import otp_router
 
 def create_app() -> FastAPI:
     app = FastAPI(title='OTP FASTAPI', debug=False)
-    app.include_router(otp_router)
+    app.include_router(otp_router, prefix="/api/v1/otp")
     app.add_exception_handler(OTPFastApiException, app_error_handler)
     app.add_exception_handler(Exception, base_exception_handler)
     app.add_middleware(AppMiddleware)
