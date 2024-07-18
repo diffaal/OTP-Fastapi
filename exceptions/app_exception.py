@@ -13,10 +13,8 @@ class OTPFastApiException(Exception):
     
     def process_error_response(self):
         logger.error(f"Response exc type::{type(self).__name__}")
-        response = make_base_response(self.code, self.message, self.data)
-        logger.error(f"Response exc detail:: {response.body}")
-        return response
-        
+        logger.error(f"Response exc detail:: {self}")
+        return make_base_response(self.code, self.message, self.data)
 
 class BadRequestException(OTPFastApiException):
     def __init__(self, message, data) -> None:
@@ -35,14 +33,14 @@ class InvalidRequestException(OTPFastApiException):
         super().__init__(HTTPStatus.UNPROCESSABLE_ENTITY, message, data)
 
 class InternalErrorException(OTPFastApiException):
-    def __init__(self, message, data) -> None:
+    def __init__(self, message, data=None) -> None:
         super().__init__(HTTPStatus.INTERNAL_SERVER_ERROR, message, data)
 
 class DatabaseException(InternalErrorException):
-    def __init__(self, data = None) -> None:
+    def __init__(self, data=None) -> None:
         super().__init__(ResponseMessage.DATABASE_ERROR.value, data)
 
-def error_logger(e):
+def exception_error_logger(e):
     logger.error(f"Exception Type::{type(e).__name__}")
     logger.error(f"Syserr::{e}")
     logger.error(f"Traceback::{format_exc()}")

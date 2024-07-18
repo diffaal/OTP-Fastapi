@@ -15,6 +15,7 @@ class AppConfig(BaseSettings):
     HOST: str
     PORT: int
     SERVICE_WORKERS: int
+    THREAD_SIZE: int
 
 class DBConfig(BaseSettings):
     model_config = SettingsConfigDict(

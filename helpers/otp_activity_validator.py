@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from fastapi.concurrency import run_in_threadpool
 
 from config import PARAM_CONFIG
 from exceptions.app_exception import BadRequestException
@@ -13,12 +14,16 @@ class OTPActivityValidator:
     def __init__(self, otp_activity_repository: OtpActivityRepository) -> None:
         self.otp_activity_repository = otp_activity_repository
 
-    def validate_otp_activity(
+    async def validate_otp_activity(
         self,
         phone_number, 
         activity_type
     ):
-        otp_activity = self.otp_activity_repository.get_last_otp_activity(phone_number, activity_type)
+        otp_activity = await run_in_threadpool(
+            self.otp_activity_repository.get_last_otp_activity,
+            phone_number, 
+            activity_type
+        )
         
         if otp_activity:
             now = datetime.now()
@@ -49,7 +54,10 @@ class OTPActivityValidator:
                 activity_type=activity_type,
                 attempt=0
             )
-            otp_activity = self.otp_activity_repository.add(new_otp_activity)
+            otp_activity = await run_in_threadpool(
+                self.otp_activity_repository.add,
+                new_otp_activity
+            )
         
         return otp_activity
         

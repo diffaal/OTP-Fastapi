@@ -6,7 +6,7 @@ from starlette.requests import Request
 
 class AppMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        exclude_paths = ["/health"]
+        exclude_paths = ["/health", "/available-threads"]
 
         if request.url.path in exclude_paths:
             response = await call_next(request)

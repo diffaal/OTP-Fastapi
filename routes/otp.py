@@ -19,10 +19,10 @@ otp_router = APIRouter()
     response_model_exclude_unset=True, 
     tags=["Generate OTP"]
 )
-def generate_otp_route(req: GenerateOTPRequest, db: Session = Depends(get_db), log_id: str = Depends(get_log_id)):
+async def generate_otp_route(req: GenerateOTPRequest, db: Session = Depends(get_db), log_id: str = Depends(get_log_id)):
     logger.info(f"{log_id} - Start to processing Generate OTP Service. Request:\n{json.dumps(dict(req), indent=2)}")
 
-    result = GenerateOTPService(db, log_id).generate_otp(req)
+    result = await GenerateOTPService(db, log_id).generate_otp(req)
 
     logger.info(f"{log_id} - Finished process Generate OTP Service. Response:\n{json.dumps(result, indent=2)}")
     return result
@@ -33,10 +33,10 @@ def generate_otp_route(req: GenerateOTPRequest, db: Session = Depends(get_db), l
     response_model_exclude_unset=True, 
     tags=["Validate OTP"]
 )
-def validate_otp_route(req: ValidateOTPRequest, db: Session = Depends(get_db), log_id: str = Depends(get_log_id)):
+async def validate_otp_route(req: ValidateOTPRequest, db: Session = Depends(get_db), log_id: str = Depends(get_log_id)):
     logger.info(f"{log_id} - Start to processing Validate OTP Service. Request:\n{json.dumps(dict(req), indent=2)}")
 
-    result = ValidateOTPService(db, log_id).validate_otp(req)
+    result = await ValidateOTPService(db, log_id).validate_otp(req)
 
     logger.info(f"{log_id} - Finished process Validate OTP Service. Response:\n{json.dumps(result, indent=2)}")
 

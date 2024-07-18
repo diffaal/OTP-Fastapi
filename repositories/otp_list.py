@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from exceptions.app_exception import error_logger
+from exceptions.app_exception import exception_error_logger
 from exceptions.app_exception import DatabaseException
 from models.otp_list import OtpList
 
@@ -16,7 +16,7 @@ class OtpListRepository:
             return new_otp_list
         except Exception as e:
             self.db.rollback()
-            error_logger(e)
+            exception_error_logger(e)
             raise DatabaseException()
     
     def update(self, otp_list: OtpList):
@@ -27,7 +27,7 @@ class OtpListRepository:
             return otp_list
         except Exception as e:
             self.db.rollback()
-            error_logger(e)
+            exception_error_logger(e)
             raise DatabaseException()
     
     def get_by_phone_number(self, phone_number):
@@ -35,5 +35,5 @@ class OtpListRepository:
             return self.db.query(OtpList).filter(OtpList.phone_number == phone_number).first()
         except Exception as e:
             self.db.rollback()
-            error_logger(e)
+            exception_error_logger(e)
             raise DatabaseException()

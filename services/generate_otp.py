@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from fastapi.concurrency import run_in_threadpool
 from http import HTTPStatus
 from loguru import logger
 from sqlalchemy.orm import Session
@@ -17,18 +18,17 @@ from schemas.generate_otp import GenerateOTPRequest, GenerateOTPResponse, Genera
 
 class GenerateOTPService:
     def __init__(self, db: Session, log_id) -> None:
-        self.db = db
         self.otp_activity_repository = OtpActivityRepository(db)
         self.otp_list_repository = OtpListRepository(db)
         self.log_id = log_id
 
-    def generate_otp(self, req: GenerateOTPRequest):
+    async def generate_otp(self, req: GenerateOTPRequest):
         phone_number = req.phone_number
         otp_sender = req.otp_sender
         
         otp_activity_validator = OTPActivityValidator(self.otp_activity_repository)
-        gen_otp_activity = otp_activity_validator.validate_otp_activity(phone_number, ActivityType.GENERATE_OTP.value)
-        _ = otp_activity_validator.validate_otp_activity(phone_number, ActivityType.VALIDATE_OTP.value)
+        gen_otp_activity = await otp_activity_validator.validate_otp_activity(phone_number, ActivityType.GENERATE_OTP.value)
+        _ = await otp_activity_validator.validate_otp_activity(phone_number, ActivityType.VALIDATE_OTP.value)
         
         otp_code = OTPCodeGenerator.generate_otp_code()
         logger.info(f"OTP Code : {otp_code}")
@@ -41,20 +41,23 @@ class GenerateOTPService:
         start_sm = datetime.now()
         logger.info(f'{self.log_id} - Send OTP Message process started')
 
-        otp_sender_service.send_otp(phone_number, otp_code, self.log_id)
+        await otp_sender_service.send_otp(phone_number, otp_code, self.log_id)
 
         end_sm = datetime.now()
         sm_time = end_sm - start_sm
         logger.info(f"{self.log_id} - Send OTP Message finished. Time elapsed: {sm_time.total_seconds() * 1000}ms")
         
-        self.insert_otp_code(phone_number, otp_code)
+        await self.insert_otp_code(phone_number, otp_code)
 
         if not gen_otp_activity.attempt:
             gen_otp_activity.attempt = 1
         else:
             gen_otp_activity.attempt += 1
 
-        self.otp_activity_repository.update(gen_otp_activity)
+        await run_in_threadpool(
+            self.otp_activity_repository.update,
+            gen_otp_activity
+        )
 
         res_data = GenerateOTPResponseData(generate_otp_attempt=gen_otp_activity.attempt)
 
@@ -64,18 +67,24 @@ class GenerateOTPService:
             data=res_data.model_dump()
         ).model_dump()
     
-    def insert_otp_code(self, phone_number, otp_code):
+    async def insert_otp_code(self, phone_number, otp_code):
         now = datetime.now()
         expired_minute = timedelta(minutes=PARAM_CONFIG.OTP_CODE_EXPIRED_MINUTES)
         otp_expired = now + expired_minute
 
-        otp_list = self.otp_list_repository.get_by_phone_number(phone_number)
+        otp_list = await run_in_threadpool(
+            self.otp_list_repository.get_by_phone_number,
+            phone_number
+        )
         if otp_list:
             otp_list.otp_code = otp_code
             otp_list.is_used = False
             otp_list.expired_time = otp_expired
 
-            self.otp_list_repository.update(otp_list)
+            await run_in_threadpool(
+                self.otp_list_repository.update,
+                otp_list
+            )
         else:
             new_otp_list = OtpList(
                 phone_number=phone_number,
@@ -83,4 +92,7 @@ class GenerateOTPService:
                 is_used=False,
                 expired_time=otp_expired
             )
-            self.otp_list_repository.add(new_otp_list)
+            await run_in_threadpool(
+                self.otp_list_repository.add,
+                new_otp_list
+            )

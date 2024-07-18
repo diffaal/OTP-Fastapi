@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from exceptions.app_exception import error_logger
+from exceptions.app_exception import exception_error_logger
 from exceptions.app_exception import DatabaseException
 from models.otp_activity import OtpActivity
 
@@ -16,7 +16,7 @@ class OtpActivityRepository:
             return new_otp_activity
         except Exception as e:
             self.db.rollback()
-            error_logger(e)
+            exception_error_logger(e)
             raise DatabaseException()
 
     def update(self, otp_activity: OtpActivity):
@@ -27,7 +27,7 @@ class OtpActivityRepository:
             return otp_activity
         except Exception as e:
             self.db.rollback()
-            error_logger(e)
+            exception_error_logger(e)
             raise DatabaseException()
     
     def get_last_otp_activity(self, phone_number, activity_type):
@@ -38,5 +38,5 @@ class OtpActivityRepository:
             ).order_by(OtpActivity.updated_at.desc()).first()
         except Exception as e:
             self.db.rollback()
-            error_logger(e)
+            exception_error_logger(e)
             raise DatabaseException()
