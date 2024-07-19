@@ -10,7 +10,7 @@ from schemas.generate_otp import GenerateOTPResponseData
 from schemas.validate_otp import ValidateOTPResponseData
 
 
-class OTPActivityValidator:
+class OTPActivityHelper:
     def __init__(self, otp_activity_repository: OtpActivityRepository) -> None:
         self.otp_activity_repository = otp_activity_repository
 
@@ -60,4 +60,17 @@ class OTPActivityValidator:
             )
         
         return otp_activity
+    
+    async def increment_activity_attempt(self, otp_activity: OtpActivity):
+        if not otp_activity.attempt:
+            otp_activity.attempt = 1
+        else:
+            otp_activity.attempt += 1
+
+        await run_in_threadpool(
+            self.otp_activity_repository.update,
+            otp_activity
+        )
+
+        return otp_activity.attempt
         

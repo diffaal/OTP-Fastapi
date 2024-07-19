@@ -4,7 +4,7 @@ from http import HTTPStatus
 from sqlalchemy.orm import Session
 
 from exceptions.app_exception import BadRequestException
-from helpers.otp_activity_validator import OTPActivityValidator
+from helpers.otp_activity import OTPActivityHelper
 from models.enums import ActivityType, ResponseMessage
 from repositories.otp_activity import OtpActivityRepository
 from repositories.otp_list import OtpListRepository
@@ -18,38 +18,27 @@ class ValidateOTPService:
         self.log_id = log_id
 
     async def validate_otp(self, req: ValidateOTPRequest):
-        phone_number = req.phone_number
-        otp_code = req.otp_code
+        otp_activity_helper = OTPActivityHelper(self.otp_activity_repository)
 
-        otp_activity_validator = OTPActivityValidator(self.otp_activity_repository)
-        val_otp_activity = await otp_activity_validator.validate_otp_activity(phone_number, ActivityType.VALIDATE_OTP.value)
+        val_otp_activity = await otp_activity_helper.validate_otp_activity(req.phone_number, ActivityType.VALIDATE_OTP.value)
 
-        err_message = await self.validate_otp_code(phone_number, otp_code)
+        err_message = await self.validate_otp_code(req.phone_number, req.otp_code)
         if err_message:
-            if not val_otp_activity.attempt:
-                val_otp_activity.attempt = 1
-            else:
-                val_otp_activity.attempt += 1
-            
-            await run_in_threadpool(
-                self.otp_activity_repository.update,
-                val_otp_activity
-            )
-            
-            res_data = ValidateOTPResponseData(
-                validate_otp_failed_attempt=val_otp_activity.attempt
-            ).model_dump()
+            attempt = await otp_activity_helper.increment_activity_attempt(val_otp_activity)
 
-            raise BadRequestException(err_message, res_data)
-        
-        res_data = ValidateOTPResponseData(
-            validate_otp_failed_attempt=val_otp_activity.attempt
-        )
+            raise BadRequestException(
+                err_message,
+                ValidateOTPResponseData(
+                    validate_otp_failed_attempt=attempt
+                ).model_dump()
+            )
         
         return ValidateOTPResponse(
             code=HTTPStatus.OK,
             message=ResponseMessage.SUCCESS.value,
-            data=res_data.model_dump()
+            data=ValidateOTPResponseData(
+                validate_otp_failed_attempt=val_otp_activity.attempt
+            ).model_dump()
         ).model_dump()
         
     
