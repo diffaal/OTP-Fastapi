@@ -7,6 +7,7 @@ from config import APP_CONFIG
 from exceptions.app_exception import OTPFastApiException
 from exceptions.error_handler import app_error_handler, base_exception_handler
 from middlewares.app_middleware import AppMiddleware
+from models import engine
 from routes.otp import otp_router
 from routes.thread import thread_router
 
@@ -14,6 +15,7 @@ from routes.thread import thread_router
 async def lifespan(app: FastAPI):
     to_thread.current_default_thread_limiter().total_tokens = APP_CONFIG.THREAD_SIZE
     yield
+    engine.dispose()
 
 def create_app() -> FastAPI:
     app = FastAPI(title='OTP FASTAPI', lifespan=lifespan, debug=False)
